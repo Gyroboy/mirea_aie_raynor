@@ -111,8 +111,10 @@ def report(
         f.write(f"- Макс. доля пропусков по колонке: **{quality_flags['max_missing_share']:.2%}**\n")
         f.write(f"- Слишком мало строк: **{quality_flags['too_few_rows']}**\n")
         f.write(f"- Слишком много колонок: **{quality_flags['too_many_columns']}**\n")
-        f.write(f"- Слишком много пропусков: **{quality_flags['too_many_missing']}**\n\n")
-
+        f.write(f"- Слишком много пропусков: **{quality_flags['too_many_missing']}**\n")
+        f.write(f"- Нулевая активность пользователей: **{quality_flags['has_zero_activity']}**\n")
+        f.write(f"- Дубликаты в столбце User_id: **{quality_flags['has_duplicate_user_id']}**\n")
+        f.write(f"- Подозрительный год регистрации: **{quality_flags['has_suspicious_signup_year']}**\n\n")
         f.write("## Колонки\n\n")
         f.write("См. файл `summary.csv`.\n\n")
 

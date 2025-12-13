@@ -185,12 +185,48 @@ def compute_quality_flags(summary: DatasetSummary, missing_df: pd.DataFrame) -> 
     flags["max_missing_share"] = max_missing_share
     flags["too_many_missing"] = max_missing_share > 0.5
 
+    # добавление эвристики нулевой активности пользователей
+    zero_activity = False
+    for col in summary.columns:
+        if col.name in (
+            "sessions_last_30d",
+            "avg_session_duration_min",
+            "pages_per_session",
+        )and col.is_numeric and col.min == 0:
+            zero_activity = True
+
+    flags["has_zero_activity"] = zero_activity
+
+
+    # добавление дубликатов user_id
+    flags["has_duplicate_user_id"] = False
+    for col in summary.columns:
+        if col.name == "user_id" and col.unique < col.non_null:
+            flags["has_duplicate_user_id"]= True
+            break
+    
+    # добавление проверки подозрительного года регистрации
+    flags["has_suspicious_signup_year"] = False
+
+    for col in summary.columns:
+        if col.name == "signup_year" and col.is_numeric:
+            if col.min is not None and col.min < 2000:
+                flags["has_suspicious_signup_year"] = True
+            if col.max is not None and col.max > 2025:
+                flags["has_suspicious_signup_year"] = True
+
     # Простейший «скор» качества
     score = 1.0
     score -= max_missing_share  # чем больше пропусков, тем хуже
     if summary.n_rows < 100:
-        score -= 0.2
+        score -= 0.1
     if summary.n_cols > 100:
+        score -= 0.1
+    if flags["has_zero_activity"]:
+        score -= 0.1
+    if flags['has_duplicate_user_id']:
+        score -= 0.1
+    if flags["has_suspicious_signup_year"]:
         score -= 0.1
 
     score = max(0.0, min(1.0, score))
