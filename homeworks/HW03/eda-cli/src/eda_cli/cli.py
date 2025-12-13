@@ -67,6 +67,10 @@ def report(
     sep: str = typer.Option(",", help="Разделитель в CSV."),
     encoding: str = typer.Option("utf-8", help="Кодировка файла."),
     max_hist_columns: int = typer.Option(6, help="Максимум числовых колонок для гистограмм."),
+    # новые CLI команды
+    top_k_categories: int = typer.Option(5, help = "Сколько top-значений выводить для категориальных значений"),
+    min_missing_share: float = typer.Option(0.05, help="Порог доли пропусков: колонки выше порога считаем проблемными."),
+    title: str = typer.Option("EDA-отчёт", help="Заголовок отчёта (первая строка report.md)."),
 ) -> None:
     """
     Сгенерировать полный EDA-отчёт:
@@ -85,8 +89,12 @@ def report(
     summary = summarize_dataset(df)
     summary_df = flatten_summary_for_print(summary)
     missing_df = missing_table(df)
+    problem_cols = []
+    if not missing_df.empty:
+        problem_cols = missing_df[missing_df["missing_share"] >= min_missing_share].index.tolist() 
+
     corr_df = correlation_matrix(df)
-    top_cats = top_categories(df)
+    top_cats = top_categories(df, top_k= top_k_categories)
 
     # 2. Качество в целом
     quality_flags = compute_quality_flags(summary, missing_df)
@@ -102,7 +110,7 @@ def report(
     # 4. Markdown-отчёт
     md_path = out_root / "report.md"
     with md_path.open("w", encoding="utf-8") as f:
-        f.write(f"# EDA-отчёт\n\n")
+        f.write(f"# {title}\n\n")
         f.write(f"Исходный файл: `{Path(path).name}`\n\n")
         f.write(f"Строк: **{summary.n_rows}**, столбцов: **{summary.n_cols}**\n\n")
 
@@ -123,6 +131,14 @@ def report(
             f.write("Пропусков нет или датасет пуст.\n\n")
         else:
             f.write("См. файлы `missing.csv` и `missing_matrix.png`.\n\n")
+            f.write(f"Порог проблемных пропусков: **{min_missing_share:.2%}**\n\n")
+            if problem_cols:
+                f.write("Проблемные колонки (выше порога): \n\n")
+                for i in problem_cols:
+                    f.write(f"- {i}\n")
+                f.write("\n")
+            else:
+                f.write("Проблемных колонок по пропускам не найдено")
 
         f.write("## Корреляция числовых признаков\n\n")
         if corr_df.empty:
