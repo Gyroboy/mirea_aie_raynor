@@ -185,6 +185,17 @@ def compute_quality_flags(summary: DatasetSummary, missing_df: pd.DataFrame) -> 
     flags["max_missing_share"] = max_missing_share
     flags["too_many_missing"] = max_missing_share > 0.5
 
+    df - summary.df
+
+    # несогласованная выручка
+    required = {"purchases_last_30d", "revenue_last_30d"}
+    if required.issubset(df.columns):
+        flags["has_inconsistent_revenue"] = ((df["purchases_last_30d"] == 0 & (df["revenue_last_30d"] > 0))).any()
+    else:
+        flags["has_inconsistent_revenue"] = False
+
+    # неактивные пользователи
+    
     # Простейший «скор» качества
     score = 1.0
     score -= max_missing_share  # чем больше пропусков, тем хуже
