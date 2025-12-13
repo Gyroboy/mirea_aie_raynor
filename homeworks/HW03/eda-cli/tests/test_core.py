@@ -59,3 +59,47 @@ def test_correlation_and_top_categories():
     city_table = top_cats["city"]
     assert "value" in city_table.columns
     assert len(city_table) <= 2
+
+def test_detect_duplicate_user_id():
+    df = pd.DataFrame(
+        {
+            "user_id": [1, 2, 2],  # дубликат
+            "sessions_last_30d": [1, 1, 1],
+            "revenue_last_30d": [0.0, 0.0, 0.0],
+            "signup_year": [2020, 2021, 2022],
+        }
+    )
+
+    summary = summarize_dataset(df)
+    missing_df = missing_table(df)
+    flags = compute_quality_flags(summary, missing_df)
+
+    assert flags["has_duplicate_user_id"] is True
+
+def test_detect_suspicious_signup_year():
+    df = pd.DataFrame(
+        {
+            "user_id": [1, 2, 3],
+            "signup_year": [1999, 2020, 2030],  # 1999 < 2000, 2030 > 2025
+        }
+    )
+
+    summary = summarize_dataset(df)
+    missing_df = missing_table(df)
+    flags = compute_quality_flags(summary, missing_df)
+
+    assert flags["has_suspicious_signup_year"] is True
+
+def test_detect_zero_users_activity():
+    df = pd.DataFrame(
+        {
+            "user_id": [1,2,3],
+            "sessions_last_30d": [0, 1, 1], # нулевая активность пользователя
+            "revenue_last_30d": [1.0, 1.0, 1.0],
+        }
+    )
+    summary = summarize_dataset(df)
+    missing_df = missing_table(df)
+    flags = compute_quality_flags(summary, missing_df)
+
+    assert flags["has_zero_activity"] is True
