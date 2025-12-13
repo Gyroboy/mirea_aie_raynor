@@ -67,7 +67,7 @@ def report(
     sep: str = typer.Option(",", help="Разделитель в CSV."),
     encoding: str = typer.Option("utf-8", help="Кодировка файла."),
     max_hist_columns: int = typer.Option(6, help="Максимум числовых колонок для гистограмм."),
-    # новые CLI команды
+    # новые CLI-команды
     top_k_categories: int = typer.Option(5, help = "Сколько top-значений выводить для категориальных значений"),
     min_missing_share: float = typer.Option(0.05, help="Порог доли пропусков: колонки выше порога считаем проблемными."),
     title: str = typer.Option("EDA-отчёт", help="Заголовок отчёта (первая строка report.md)."),
