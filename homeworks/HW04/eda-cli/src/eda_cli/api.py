@@ -78,6 +78,14 @@ class QualityResponse(BaseModel):
     )
 
 
+# добавление класса для эндпоинта вывода флагов 
+class QualityFlags(BaseModel):
+    flags: dict[str, bool] = Field (
+        ...,
+        description = "Набор флагов качества в формате bool (включая новые эвристики)"
+    )
+
+
 # ---------- Системный эндпоинт ----------
 
 
@@ -242,3 +250,40 @@ async def quality_from_csv(file: UploadFile = File(...)) -> QualityResponse:
         flags=flags_bool,
         dataset_shape={"n_rows": n_rows, "n_cols": n_cols},
     )
+
+
+# Эндпоинт вывода состояний флагов (тип bool)
+
+@app.post (
+    "/quality-flags-from-csv",
+    response_model = QualityFlags,
+    tags = ["quality"],
+    summary = "Набор флагов качетства данных. (включая новые эвристики)"
+)
+async def quality_flags (file: UploadFile = File (...)) -> QualityFlags:
+
+    # Эндпоин, который принимает CSV файл, вызывает проверку флагов и возвращает JSON с состояниями флагов.
+
+    if file.content_type not in ("text/csv", "application/vnd.ms-excel", "application/octet-stream"):
+        raise HTTPException(status_code = 400, detail = "Ожидается CSV-файл (content-type text/csv).")
+    
+    try:
+        df = pd.read_csv(file.file)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail = f"Не удалось прочитать CSV {exc}")
+    
+    if df.empty:
+        raise HTTPException(status_code = 400, detail = "CSV-файл не содержит данных (пустой DataFrame)")
+    
+    summary = summarize_dataset(df)
+    missing_df = missing_table(df)
+    flags_all = compute_quality_flags(summary, missing_df)
+
+
+    flags_bool: dict[str, bool] = {
+        key: bool(value)
+        for key, value in flags_all.items()
+        if isinstance(value, bool)
+    }
+
+    return QualityFlags(flags = flags_bool)
